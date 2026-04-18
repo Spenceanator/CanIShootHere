@@ -1282,6 +1282,56 @@ svg.leaflet-image-layer.leaflet-interactive path {
   </div>
 </div>
 
+<!-- Modals -->
+<!-- Modals -->
+<div class="modal-bg" id="savedModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Saved spots</div>
+      <button class="modal-close" id="savedClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="savedList"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="saveModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Save this spot</div>
+      <button class="modal-close" id="saveClose" aria-label="Close">×</button>
+    </div>
+    <div class="save-prompt">
+      <input id="saveNameInput" type="text" placeholder="Name this spot (e.g. Cedar Valley backstop)" autocomplete="off" />
+      <div class="save-prompt-actions">
+        <button class="action-btn secondary" id="saveCancel">Cancel</button>
+        <button class="action-btn" id="saveConfirm">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dirsModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Get directions</div>
+      <button class="modal-close" id="dirsClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="dirsOptions"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="sourcesModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Data sources</div>
+      <button class="modal-close" id="sourcesClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body sources-body" id="sourcesBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script id="leaflet-js">
 /* @preserve
  * Leaflet 1.9.4, a JS library for interactive maps. https://leafletjs.com
@@ -2363,54 +2413,7 @@ function openSourcesModal() {
 }
 
 </script>
-<!-- Modals -->
-<div class="modal-bg" id="savedModal">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">Saved spots</div>
-      <button class="modal-close" id="savedClose" aria-label="Close">×</button>
-    </div>
-    <div class="modal-body" id="savedList"></div>
-  </div>
-</div>
 
-<div class="modal-bg" id="saveModal">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">Save this spot</div>
-      <button class="modal-close" id="saveClose" aria-label="Close">×</button>
-    </div>
-    <div class="save-prompt">
-      <input id="saveNameInput" type="text" placeholder="Name this spot (e.g. Cedar Valley backstop)" autocomplete="off" />
-      <div class="save-prompt-actions">
-        <button class="action-btn secondary" id="saveCancel">Cancel</button>
-        <button class="action-btn" id="saveConfirm">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-bg" id="dirsModal">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">Get directions</div>
-      <button class="modal-close" id="dirsClose" aria-label="Close">×</button>
-    </div>
-    <div class="modal-body" id="dirsOptions"></div>
-  </div>
-</div>
-
-<div class="modal-bg" id="sourcesModal">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div class="modal-title">Data sources</div>
-      <button class="modal-close" id="sourcesClose" aria-label="Close">×</button>
-    </div>
-    <div class="modal-body sources-body" id="sourcesBody"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
 
 </body>
 </html>

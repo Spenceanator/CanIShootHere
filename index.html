@@ -57,7 +57,8 @@
   .hdr-loc-btn:active{background:var(--panel);color:var(--ink)}
 
   /* Map */
-  #map{flex:1;min-height:0;background:#0a0907;z-index:1}
+  #map-wrap{flex:1;position:relative;min-height:0}
+  #map{position:absolute;inset:0;background:#0a0907;z-index:1}
   .leaflet-container{background:#0a0907;font-family:var(--sans)}
   .leaflet-control-attribution{
     background:rgba(14,13,10,0.7)!important;color:var(--ink-muted)!important;
@@ -187,7 +188,7 @@
   <button class="hdr-loc-btn" id="locBtn">My location</button>
 </div>
 
-<div id="map-wrap" style="flex:1;position:relative;min-height:0;">
+<div id="map-wrap">
   <div id="map"></div>
   <div class="xhair">
     <div class="xhair-ring"></div>
@@ -321,7 +322,26 @@ const topoTiles = L.tileLayer(
 );
 satTiles.addTo(map);
 
-document.getElementById('bm-sat').onclick = () => {
+// Force Leaflet to recalc size after layout settles (fixes blank-map issues)
+requestAnimationFrame(() => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 100);
+setTimeout(() => map.invalidateSize(), 500);
+window.addEventListener('resize', () => map.invalidateSize());
+window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 200));
+
+// Surface tile errors visibly so blank maps don't fail silently
+let tileErrorCount = 0;
+[satTiles, topoTiles].forEach(layer => {
+  layer.on('tileerror', () => {
+    tileErrorCount++;
+    if (tileErrorCount === 3) {
+      const el = document.getElementById('vSub');
+      if (el && el.textContent.includes('Pan and zoom')) {
+        el.textContent = 'Map tiles failing to load. Try Topo, or check connection.';
+      }
+    }
+  });
+});
   map.removeLayer(topoTiles); satTiles.addTo(map);
   document.getElementById('bm-sat').classList.add('active');
   document.getElementById('bm-topo').classList.remove('active');

@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Can I Shoot Here?</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0d0a;
+    --bg-2:#16140f;
+    --panel:#1a1713;
+    --ink:#e8e2d4;
+    --ink-dim:#8f887a;
+    --ink-muted:#5c574d;
+    --rule:#2b2620;
+    --ok:#8ab069;
+    --ok-bg:#1a2413;
+    --warn:#d9a441;
+    --warn-bg:#2a200f;
+    --bad:#c85a4a;
+    --bad-bg:#2a140f;
+    --accent:#d9a441;
+    --serif:"Fraunces", ui-serif, Georgia, serif;
+    --sans:"Inter Tight", ui-sans-serif, system-ui, sans-serif;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);overscroll-behavior:none}
+  body{display:flex;flex-direction:column}
+
+  /* Header */
+  .hdr{
+    position:relative;z-index:500;
+    padding:env(safe-area-inset-top) 16px 10px;
+    background:linear-gradient(180deg,var(--bg) 0%, rgba(14,13,10,0.85) 80%, transparent 100%);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .hdr-title{
+    font-family:var(--serif);font-weight:600;font-style:italic;
+    font-size:22px;letter-spacing:-0.02em;line-height:1;
+    color:var(--ink);
+  }
+  .hdr-sub{
+    font-family:var(--mono);font-size:10px;color:var(--ink-muted);
+    text-transform:uppercase;letter-spacing:0.15em;
+  }
+  .hdr-spacer{flex:1}
+  .hdr-loc-btn{
+    font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--rule);color:var(--ink-dim);
+    padding:7px 10px;border-radius:4px;cursor:pointer;
+  }
+  .hdr-loc-btn:active{background:var(--panel);color:var(--ink)}
+
+  /* Map */
+  #map{flex:1;min-height:0;background:#0a0907;z-index:1}
+  .leaflet-container{background:#0a0907;font-family:var(--sans)}
+  .leaflet-control-attribution{
+    background:rgba(14,13,10,0.7)!important;color:var(--ink-muted)!important;
+    font-size:9px!important;font-family:var(--mono)!important;
+    padding:2px 6px!important;border-radius:3px 0 0 0;
+  }
+  .leaflet-control-attribution a{color:var(--ink-dim)!important}
+
+  /* Basemap toggle */
+  .basemap-ctl{
+    position:absolute;right:10px;bottom:calc(200px + env(safe-area-inset-bottom));z-index:400;
+    display:flex;flex-direction:column;gap:1px;
+    background:var(--panel);border:1px solid var(--rule);border-radius:6px;overflow:hidden;
+  }
+  .basemap-ctl button{
+    background:transparent;border:0;color:var(--ink-dim);padding:10px 12px;
+    font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    cursor:pointer;min-height:40px;min-width:56px;
+  }
+  .basemap-ctl button.active{background:var(--bg-2);color:var(--accent)}
+
+  /* Crosshair */
+  .xhair{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    pointer-events:none;z-index:450;width:56px;height:56px;
+  }
+  .xhair::before,.xhair::after{
+    content:"";position:absolute;background:var(--accent);box-shadow:0 0 0 1px rgba(0,0,0,0.5);
+  }
+  .xhair::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-50%)}
+  .xhair::after{top:50%;left:0;height:1px;width:100%;transform:translateY(-50%)}
+  .xhair-dot{
+    position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;
+    background:var(--accent);transform:translate(-50%,-50%);
+    box-shadow:0 0 0 2px var(--bg);
+  }
+  .xhair-ring{
+    position:absolute;top:50%;left:50%;width:24px;height:24px;border-radius:50%;
+    border:1px solid var(--accent);transform:translate(-50%,-50%);opacity:0.7;
+  }
+
+  /* Verdict panel */
+  .verdict{
+    position:relative;z-index:500;
+    background:var(--bg-2);border-top:1px solid var(--rule);
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+    min-height:200px;
+  }
+  .verdict-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px}
+  .verdict-badge{
+    flex:0 0 auto;width:52px;height:52px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:800;font-size:28px;font-style:italic;
+    border:1.5px solid transparent;
+  }
+  .verdict-badge.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+  .verdict-badge.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+  .verdict-badge.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+  .verdict-badge.idle{background:var(--panel);border-color:var(--rule);color:var(--ink-muted);font-size:22px}
+  .verdict-headline{
+    font-family:var(--serif);font-weight:600;font-style:italic;
+    font-size:26px;line-height:1.05;letter-spacing:-0.02em;margin:4px 0 2px;
+  }
+  .verdict-headline.ok{color:var(--ok)}
+  .verdict-headline.warn{color:var(--warn)}
+  .verdict-headline.bad{color:var(--bad)}
+  .verdict-headline.idle{color:var(--ink-dim);font-style:normal;font-weight:400;font-size:20px}
+  .verdict-sub{
+    font-family:var(--sans);font-size:13px;line-height:1.4;color:var(--ink-dim);
+    max-width:54ch;
+  }
+
+  .fields{
+    margin-top:8px;padding-top:12px;border-top:1px solid var(--rule);
+    display:grid;grid-template-columns:auto 1fr;gap:6px 14px;
+    font-size:12px;
+  }
+  .fields dt{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:0.15em;text-transform:uppercase;
+    color:var(--ink-muted);align-self:center;
+  }
+  .fields dd{margin:0;color:var(--ink);font-family:var(--mono);font-size:12px;word-break:break-all}
+  .fields dd.val-none{color:var(--ink-muted)}
+
+  .check-btn{
+    width:100%;margin-top:12px;padding:14px;
+    background:var(--accent);color:#1a1407;border:0;border-radius:4px;
+    font-family:var(--mono);font-size:12px;font-weight:700;
+    letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;
+  }
+  .check-btn:disabled{background:var(--rule);color:var(--ink-muted);cursor:default}
+  .check-btn.loading{background:var(--panel);color:var(--accent);border:1px solid var(--accent)}
+
+  .disclaimer{
+    margin-top:10px;font-family:var(--sans);font-size:11px;line-height:1.45;
+    color:var(--ink-muted);
+  }
+  .disclaimer strong{color:var(--ink-dim);font-weight:500}
+
+  /* Closure flag */
+  .flag{
+    display:inline-block;padding:3px 7px;margin-right:4px;margin-bottom:3px;
+    background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);
+    font-family:var(--mono);font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;
+  }
+  .flag.hard{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+
+  /* Utility */
+  .spinner{
+    display:inline-block;width:10px;height:10px;border:1.5px solid var(--ink-muted);
+    border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;
+    vertical-align:-1px;margin-right:6px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Closure polygon outline style applied via JS */
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Can I shoot here?</div>
+    <div class="hdr-sub">Utah · BLM surface data</div>
+  </div>
+  <div class="hdr-spacer"></div>
+  <button class="hdr-loc-btn" id="locBtn">My location</button>
+</div>
+
+<div id="map-wrap" style="flex:1;position:relative;min-height:0;">
+  <div id="map"></div>
+  <div class="xhair">
+    <div class="xhair-ring"></div>
+    <div class="xhair-dot"></div>
+  </div>
+  <div class="basemap-ctl">
+    <button id="bm-sat" class="active">Sat</button>
+    <button id="bm-topo">Topo</button>
+  </div>
+</div>
+
+<div class="verdict" id="verdict">
+  <div class="verdict-row">
+    <div class="verdict-badge idle" id="vBadge">?</div>
+    <div style="flex:1;min-width:0">
+      <div class="verdict-headline idle" id="vHeadline">Center the crosshair, tap Check</div>
+      <div class="verdict-sub" id="vSub">Pan and zoom to the spot you want to verify. This queries BLM surface management data in real time.</div>
+    </div>
+  </div>
+  <dl class="fields" id="fields" style="display:none">
+    <dt>Coords</dt><dd id="fCoord">—</dd>
+    <dt>Surface</dt><dd id="fSurface">—</dd>
+    <dt>Agency</dt><dd id="fAgency">—</dd>
+    <dt>Unit</dt><dd id="fUnit">—</dd>
+    <dt>Flags</dt><dd id="fFlags">—</dd>
+  </dl>
+  <button class="check-btn" id="checkBtn">Check this spot</button>
+  <div class="disclaimer">
+    <strong>Reality check:</strong> This tells you surface ownership and flags known Utah shooting-closure polygons the app has on file. It does not know about every seasonal fire closure, private leases, local ordinances, or what's actually on the ground. Always confirm with eyes before firing.
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ============================================================
+   Known Utah shooting closure polygons.
+   Coordinates are rough digitizations from BLM/DWR published
+   closure maps. Use as a first-pass flag, not as gospel.
+   ============================================================ */
+const CLOSURES = [
+  {
+    name: "Eastern Lake Mountains Target Shooting Closure",
+    authority: "BLM",
+    hard: true,
+    note: "~2,004 acres. Closed to target shooting. Western boundary approximately follows the power line road.",
+    // Rough polygon — eastern face of Lake Mountains facing Saratoga Springs / Eagle Mountain.
+    // Digitized from the BLM Eastern Lake Mountains Target Shooting Closure map.
+    coords: [
+      [40.380, -111.930],
+      [40.362, -111.928],
+      [40.340, -111.932],
+      [40.316, -111.942],
+      [40.298, -111.950],
+      [40.290, -111.964],
+      [40.296, -111.982],
+      [40.312, -111.988],
+      [40.334, -111.985],
+      [40.356, -111.978],
+      [40.376, -111.962],
+      [40.386, -111.946],
+      [40.380, -111.930]
+    ]
+  },
+  {
+    name: "Fivemile Pass OHV Area Shooting Closure",
+    authority: "BLM",
+    hard: true,
+    note: "OHV recreation area closed to target shooting. Land outside this polygon on surrounding BLM remains open.",
+    coords: [
+      [40.349, -112.115],
+      [40.339, -112.098],
+      [40.326, -112.092],
+      [40.316, -112.105],
+      [40.322, -112.124],
+      [40.339, -112.128],
+      [40.349, -112.115]
+    ]
+  },
+  {
+    name: "Santaquin WMA — Debris Basin & north of Powerline Rd",
+    authority: "Utah DWR",
+    hard: true,
+    note: "Permanent closure (Nov 2020) after stray bullets hit homes. Other parts of the Santaquin WMA remain open outside these sub-areas.",
+    coords: [
+      [39.990, -111.788],
+      [39.980, -111.780],
+      [39.968, -111.784],
+      [39.962, -111.796],
+      [39.972, -111.808],
+      [39.988, -111.804],
+      [39.990, -111.788]
+    ]
+  }
+];
+
+const AGENCY_LABELS = {
+  "BLM":  {label:"Bureau of Land Management", shootable:"likely_ok"},
+  "FS":   {label:"US Forest Service",         shootable:"likely_ok"},
+  "USFS": {label:"US Forest Service",         shootable:"likely_ok"},
+  "FWS":  {label:"US Fish & Wildlife Service",shootable:"no"},
+  "NPS":  {label:"National Park Service",     shootable:"no"},
+  "DOD":  {label:"Department of Defense",     shootable:"no"},
+  "DOE":  {label:"Department of Energy",      shootable:"no"},
+  "BOR":  {label:"Bureau of Reclamation",     shootable:"caution"},
+  "BIA":  {label:"Bureau of Indian Affairs (Tribal)", shootable:"no"},
+  "TRIB": {label:"Tribal land",               shootable:"no"},
+  "ST":   {label:"State land",                shootable:"caution"},
+  "SITLA":{label:"State trust land (SITLA)",  shootable:"caution"},
+  "PVT":  {label:"Private land",              shootable:"no"},
+  "PRI":  {label:"Private land",              shootable:"no"},
+  "LOC":  {label:"Local government",          shootable:"no"}
+};
+
+/* ============================================================
+   Map setup
+   ============================================================ */
+const START = [40.382, -111.959]; // Eagle Mountain
+const map = L.map('map', {
+  zoomControl:false, attributionControl:true, tap:true, worldCopyJump:true
+}).setView(START, 13);
+
+L.control.zoom({position:'topright'}).addTo(map);
+
+const satTiles = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Imagery © Esri', maxZoom:19}
+);
+const topoTiles = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Topo © Esri / USGS', maxZoom:15}
+);
+satTiles.addTo(map);
+
+document.getElementById('bm-sat').onclick = () => {
+  map.removeLayer(topoTiles); satTiles.addTo(map);
+  document.getElementById('bm-sat').classList.add('active');
+  document.getElementById('bm-topo').classList.remove('active');
+};
+document.getElementById('bm-topo').onclick = () => {
+  map.removeLayer(satTiles); topoTiles.addTo(map);
+  document.getElementById('bm-topo').classList.add('active');
+  document.getElementById('bm-sat').classList.remove('active');
+};
+
+// Draw closure polygons as a reference overlay
+const closureLayer = L.layerGroup().addTo(map);
+CLOSURES.forEach(c => {
+  L.polygon(c.coords, {
+    color: c.hard ? '#c85a4a' : '#d9a441',
+    weight: 1.5,
+    fillColor: c.hard ? '#c85a4a' : '#d9a441',
+    fillOpacity: 0.15,
+    dashArray: '4 3'
+  }).addTo(closureLayer);
+});
+
+/* ============================================================
+   Closure point-in-polygon (ray casting)
+   ============================================================ */
+function pointInPolygon(lat, lng, poly) {
+  let inside = false;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
+    const yi = poly[i][0], xi = poly[i][1];
+    const yj = poly[j][0], xj = poly[j][1];
+    const intersect = ((yi>lat) !== (yj>lat))
+      && (lng < (xj-xi)*(lat-yi)/(yj-yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function checkClosures(lat, lng) {
+  return CLOSURES.filter(c => pointInPolygon(lat, lng, c.coords));
+}
+
+/* ============================================================
+   BLM Surface Management Agency identify
+   ============================================================ */
+async function identifyBLM(lat, lng) {
+  // Build an identify query against the BLM national SMA service.
+  const geom = encodeURIComponent(JSON.stringify({
+    x: lng, y: lat, spatialReference: {wkid: 4326}
+  }));
+  const mapExtent = `${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}`;
+  const url = `https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_without_PriUnk/MapServer/identify`
+    + `?geometry=${geom}`
+    + `&geometryType=esriGeometryPoint`
+    + `&sr=4326`
+    + `&tolerance=2`
+    + `&mapExtent=${encodeURIComponent(mapExtent)}`
+    + `&imageDisplay=600,400,96`
+    + `&returnGeometry=false`
+    + `&f=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('BLM service returned ' + res.status);
+  return res.json();
+}
+
+/* Pick the "primary" hit — prefer federal agencies over private. */
+function pickPrimary(results) {
+  if (!results || !results.length) return null;
+  const priority = ['BLM','FS','USFS','NPS','FWS','DOD','DOE','BOR','BIA','TRIB','ST','SITLA','LOC','PVT','PRI'];
+  const byCode = {};
+  results.forEach(r => {
+    const code = r.attributes.ADMIN_AGENCY_CODE || r.attributes.ADMIN_DEPT_CODE;
+    if (code && !byCode[code]) byCode[code] = r;
+  });
+  for (const c of priority) {
+    if (byCode[c]) return {code:c, row:byCode[c]};
+  }
+  const first = results[0];
+  return {code: first.attributes.ADMIN_AGENCY_CODE || 'UNK', row: first};
+}
+
+/* ============================================================
+   UI rendering
+   ============================================================ */
+const el = id => document.getElementById(id);
+
+function setBadge(kind, symbol){
+  const b = el('vBadge');
+  b.className = 'verdict-badge ' + kind;
+  b.textContent = symbol;
+}
+function setHeadline(kind, text, sub){
+  el('vHeadline').className = 'verdict-headline ' + kind;
+  el('vHeadline').textContent = text;
+  el('vSub').textContent = sub || '';
+}
+function showFields(show){
+  el('fields').style.display = show ? 'grid' : 'none';
+}
+
+function renderVerdict(lat, lng, blmJson) {
+  const primary = pickPrimary(blmJson.results);
+  const closures = checkClosures(lat, lng);
+
+  el('fCoord').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+  let agencyCode = primary ? primary.code : 'UNK';
+  let agencyInfo = AGENCY_LABELS[agencyCode] || {label: agencyCode, shootable: 'unknown'};
+  let unit = (primary && primary.row.attributes.ADMIN_UNIT_NAME && primary.row.attributes.ADMIN_UNIT_NAME !== 'Null')
+    ? primary.row.attributes.ADMIN_UNIT_NAME : null;
+
+  el('fSurface').textContent = agencyInfo.label;
+  el('fSurface').className = '';
+  el('fAgency').textContent = agencyCode;
+  el('fUnit').textContent = unit || '—';
+  el('fUnit').className = unit ? '' : 'val-none';
+
+  // Flags
+  const flagsEl = el('fFlags');
+  flagsEl.innerHTML = '';
+  if (closures.length === 0) {
+    flagsEl.innerHTML = '<span style="color:var(--ink-muted)">none on file</span>';
+  } else {
+    closures.forEach(c => {
+      const sp = document.createElement('span');
+      sp.className = 'flag' + (c.hard ? ' hard' : '');
+      sp.textContent = c.authority + ' · ' + c.name.split('—')[0].trim().slice(0,40);
+      sp.title = c.note;
+      flagsEl.appendChild(sp);
+    });
+  }
+
+  showFields(true);
+
+  // Verdict logic
+  if (closures.some(c => c.hard)) {
+    setBadge('bad', '✕');
+    const c = closures.find(x => x.hard);
+    setHeadline('bad', 'No — closure on file',
+      `Inside ${c.name}. ${c.note}`);
+    return;
+  }
+  if (agencyInfo.shootable === 'no') {
+    setBadge('bad', '✕');
+    setHeadline('bad', 'No — restricted land',
+      `${agencyInfo.label} is not open to recreational target shooting.`);
+    return;
+  }
+  if (agencyInfo.shootable === 'caution') {
+    setBadge('warn', '!');
+    setHeadline('warn', 'Check rules',
+      `${agencyInfo.label} — rules vary by parcel and jurisdiction. Verify before firing.`);
+    return;
+  }
+  if (agencyInfo.shootable === 'likely_ok') {
+    setBadge('ok', '✓');
+    setHeadline('ok', 'Likely OK',
+      `${agencyInfo.label} land. Generally open to recreational shooting. Confirm no seasonal fire closures, ensure a safe backstop, and verify nothing is behind it.`);
+    return;
+  }
+  setBadge('warn', '?');
+  setHeadline('warn', 'Unknown',
+    `Couldn't classify this parcel (code: ${agencyCode}). Cross-reference with an ownership map before firing.`);
+}
+
+/* ============================================================
+   Check button
+   ============================================================ */
+const btn = el('checkBtn');
+btn.onclick = async () => {
+  const c = map.getCenter();
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spinner"></span>Checking…';
+  setBadge('idle', '…');
+  setHeadline('idle', 'Querying BLM…', 'Identifying surface management at this point.');
+  try {
+    const data = await identifyBLM(c.lat, c.lng);
+    renderVerdict(c.lat, c.lng, data);
+  } catch (e) {
+    setBadge('warn', '!');
+    setHeadline('warn', 'Lookup failed', 'Could not reach BLM service. Check connection and try again.');
+    el('fCoord').textContent = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = 'Check this spot';
+  }
+};
+
+/* ============================================================
+   Location button
+   ============================================================ */
+el('locBtn').onclick = () => {
+  if (!navigator.geolocation) return;
+  el('locBtn').textContent = 'Locating…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+      el('locBtn').textContent = 'My location';
+    },
+    () => { el('locBtn').textContent = 'My location'; },
+    {enableHighAccuracy:true, timeout:10000}
+  );
+};
+
+/* Auto-check on initial load */
+setTimeout(() => btn.click(), 400);
+
+</script>
+</body>
+</html>

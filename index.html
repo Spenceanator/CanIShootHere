@@ -712,7 +712,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* Top overlay: header + search, floating above map */
   .top-overlay{
-    position:fixed;top:0;left:0;right:0;z-index:500;
+    position:fixed;top:0;left:0;right:0;z-index:510;
     padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;
     pointer-events:none;
     background:linear-gradient(180deg, rgba(14,13,10,0.75) 0%, rgba(14,13,10,0.3) 60%, transparent 100%);
@@ -783,10 +783,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .search-result-detail{color:var(--ink-muted);font-size:11px;margin-top:3px;font-family:var(--mono)}
   .search-result-empty{padding:16px;color:var(--ink-muted);font-size:13px;text-align:center}
 
-  /* Zoom controls — bigger, thumb-friendly, bottom-right */
+  /* Zoom controls — top-right, anchored below search on mobile */
   .zoom-ctl{
-    position:fixed;right:12px;z-index:400;
-    bottom:calc(var(--verdict-h, 200px) + 16px + env(safe-area-inset-bottom));
+    position:fixed;right:12px;z-index:460;
+    top:calc(env(safe-area-inset-top) + 130px);
     display:flex;flex-direction:column;
     background:var(--panel-glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border:1px solid var(--rule);border-radius:8px;overflow:hidden;
@@ -794,7 +794,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
   .zoom-ctl button{
     background:transparent;border:0;color:var(--ink);cursor:pointer;
-    width:48px;height:48px;font-size:22px;font-weight:300;
+    width:46px;height:46px;font-size:22px;font-weight:300;
     display:flex;align-items:center;justify-content:center;
     font-family:var(--sans);
   }
@@ -802,10 +802,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .zoom-ctl button:hover{background:var(--bg-2);color:var(--accent)}
   .zoom-ctl button:active{background:var(--panel)}
 
-  /* Basemap toggle — above zoom controls */
+  /* Basemap toggle — sits below zoom controls */
   .basemap-ctl{
-    position:fixed;right:12px;z-index:400;
-    bottom:calc(var(--verdict-h, 200px) + 16px + env(safe-area-inset-bottom) + 110px);
+    position:fixed;right:12px;z-index:460;
+    top:calc(env(safe-area-inset-top) + 238px);
     display:flex;flex-direction:column;
     background:var(--panel-glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border:1px solid var(--rule);border-radius:8px;overflow:hidden;
@@ -813,16 +813,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
   .basemap-ctl button{
     background:transparent;border:0;color:var(--ink-dim);cursor:pointer;
-    width:48px;height:40px;
+    width:46px;height:38px;
     font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
   }
   .basemap-ctl button:first-child{border-bottom:1px solid var(--rule)}
   .basemap-ctl button.active{background:var(--bg-2);color:var(--accent)}
 
-  /* Ownership overlay toggle + legend */
+  /* Ownership overlay toggle — top-left, matches other controls */
   .overlay-ctl{
-    position:fixed;left:12px;z-index:400;
-    bottom:calc(var(--verdict-h, 200px) + 16px + env(safe-area-inset-bottom));
+    position:fixed;left:12px;z-index:460;
+    top:calc(env(safe-area-inset-top) + 130px);
     background:var(--panel-glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border:1px solid var(--rule);border-radius:8px;
     box-shadow:0 4px 16px rgba(0,0,0,0.4);
@@ -1167,8 +1167,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (min-width: 900px) {
     .top-overlay{
       right:auto;width:var(--sidebar-w);
-      background:none;
-      padding:12px 12px 0;
+      background:var(--panel-glass);
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      border-right:1px solid var(--rule);
+      padding:12px 12px 14px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.2);
     }
     .hdr-loc-btn{
       background:var(--panel-glass);
@@ -1185,13 +1188,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
     }
     .verdict-headline{font-size:26px}
     .zoom-ctl, .basemap-ctl{
-      bottom:auto;
+      top:auto;bottom:auto;
     }
     .zoom-ctl{top:50%;transform:translateY(-50%);right:16px}
-    .basemap-ctl{top:calc(50% - 120px);right:16px}
+    .basemap-ctl{top:calc(50% - 115px);right:16px;transform:none}
     .overlay-ctl{
-      bottom:auto;top:50%;transform:translateY(-50%);
-      left:calc(var(--sidebar-w) + 16px);
+      top:16px;left:calc(var(--sidebar-w) + 16px);
     }
     .xhair{
       /* Offset crosshair to account for sidebar width */
@@ -1244,12 +1246,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="overlay-toggle-label">Ownership</div>
   </div>
   <div class="overlay-legend">
-    <div class="legend-row"><div class="legend-swatch" style="background:#f4c76a"></div>BLM — generally OK to shoot</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#7ba05b"></div>USFS — generally OK to shoot</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#b8926a"></div>NPS / Park — no shooting</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#c4a0c0"></div>FWS / Wildlife Refuge — no shooting</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#8fa8c7"></div>State / Tribal / DOD — check rules</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:transparent;border:1px dashed var(--ink-muted)"></div>Uncolored — private or unknown</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#f3de81"></div>BLM — generally OK</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#8fc971"></div>National Forest — generally OK</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#c6a7d7"></div>National Park — no shooting</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#86c8a8"></div>Wildlife Refuge — no shooting</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#f0b3ca"></div>Military — no shooting</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#7cb2f3"></div>State Trust (SITLA) — check rules</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#bfb794"></div>State WMA — check rules</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#f2b376"></div>Tribal — no shooting</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:transparent;border:1px dashed var(--ink-muted)"></div>Uncolored — private</div>
   </div>
 </div>
 
@@ -1466,16 +1471,37 @@ const topoTiles = L.tileLayer(
 );
 satTiles.addTo(map);
 
-// BLM Surface Management Agency ownership overlay — cached ESRI tile service.
-// Shows federal land boundaries colored by managing agency.
-const ownershipOverlay = L.tileLayer(
-  'https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_without_PriUnk/MapServer/tile/{z}/{y}/{x}',
-  {
-    attribution: 'Ownership © BLM',
-    maxZoom: 16,
-    opacity: 0.55
+// Ownership overlay — SITLA Utah Land Ownership (maintained by the state,
+// reliable uptime, polygon-level accuracy). Uses the MapServer's export
+// endpoint per-tile since it's not pre-cached, but rendering is fast.
+const OwnershipTileLayer = L.TileLayer.extend({
+  initialize: function(options) {
+    L.TileLayer.prototype.initialize.call(this, '', options);
+  },
+  getTileUrl: function(coords) {
+    // Convert XYZ tile coords to a web-mercator bbox
+    const ORIGIN = 20037508.342789244;
+    const tileMeters = (ORIGIN * 2) / Math.pow(2, coords.z);
+    const xmin = -ORIGIN + coords.x * tileMeters;
+    const xmax = xmin + tileMeters;
+    const ymax = ORIGIN - coords.y * tileMeters;
+    const ymin = ymax - tileMeters;
+    const bbox = [xmin, ymin, xmax, ymax].join(',');
+    const s = this.getTileSize();
+    return 'https://gis.trustlands.utah.gov/mapping/rest/services/Land_Ownership_WM/MapServer/export'
+      + `?bbox=${bbox}`
+      + '&bboxSR=3857&imageSR=3857'
+      + `&size=${s.x},${s.y}`
+      + '&format=png32&transparent=true&f=image&dpi=96';
   }
-).addTo(map);
+});
+
+const ownershipOverlay = new OwnershipTileLayer({
+  attribution: 'Ownership © Utah SITLA',
+  maxZoom: 18,
+  minZoom: 6,
+  opacity: 0.5
+}).addTo(map);
 
 // Toggle logic
 const overlayCtl = document.getElementById('overlayCtl');
@@ -2255,10 +2281,17 @@ function openDirectionsPicker(spot) {
 const SOURCES = {
   ownership: [
     {
+      name: 'Utah SITLA — Surface Land Ownership',
+      desc: 'Visual ownership overlay on the map. Utah\'s authoritative land ownership dataset, compiled from state and federal sources at 1:24,000 scale. Maintained by the Utah School and Institutional Trust Lands Administration.',
+      url: 'https://gis.trustlands.utah.gov/mapping/rest/services/Land_Ownership_WM/MapServer',
+      fetchFresh: true
+    },
+    {
       name: 'BLM Surface Management Agency (SMA)',
-      desc: 'Federal land ownership boundaries — which agency manages a given parcel. Used for both the ownership identify check and the visual overlay.',
+      desc: 'National dataset queried for the per-point ownership identify check (the verdict returned when you tap Check). Covers all federal land, classified by managing agency.',
       url: 'https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_without_PriUnk/MapServer',
-      fetchFresh: true  // ask the service for its last-modified info
+      fetchFresh: true,
+      fetchKey: 'blm'
     }
   ],
   basemap: [
@@ -2323,14 +2356,13 @@ function formatFreshness(isoOrMillis) {
   return {label, kind, iso: d.toISOString().slice(0,10)};
 }
 
-// Try to fetch the BLM service's last-modified timestamp
-async function fetchBLMFreshness() {
+// Try to fetch a MapServer's last-modified timestamp
+async function fetchServiceFreshness(url) {
   try {
-    const res = await fetch('https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_without_PriUnk/MapServer?f=json');
+    const res = await fetch(url + '?f=json');
     if (!res.ok) return null;
     const data = await res.json();
-    // ArcGIS MapServer includes lastModified/editedDate at service or layer level
-    return data.lastModified || data.editedDate || null;
+    return data.lastModified || data.editedDate || data.serviceDescription?.match(/updated\s+(\d{4}-\d{2}-\d{2})/i)?.[1] || null;
   } catch {
     return null;
   }
@@ -2395,11 +2427,11 @@ function openSourcesModal() {
 
   openModal('sourcesModal');
 
-  // Async: fill in BLM freshness if available
+  // Async: fill in service freshness if available
   SOURCES.ownership.filter(s => s.fetchFresh).forEach(async s => {
     const elem = document.getElementById(s._freshId);
     if (!elem) return;
-    const ts = await fetchBLMFreshness();
+    const ts = await fetchServiceFreshness(s.url);
     const f = formatFreshness(ts);
     if (f) {
       elem.className = `sources-freshness ${f.kind}`;

@@ -342,6 +342,8 @@ let tileErrorCount = 0;
     }
   });
 });
+
+document.getElementById('bm-sat').onclick = () => {
   map.removeLayer(topoTiles); satTiles.addTo(map);
   document.getElementById('bm-sat').classList.add('active');
   document.getElementById('bm-topo').classList.remove('active');

@@ -952,6 +952,170 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
   .flag.hard{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
 
+  /* Save + Saved list buttons */
+  .verdict-actions{
+    display:flex;gap:8px;margin-top:12px;
+  }
+  .action-btn{
+    flex:1;padding:14px;min-height:48px;
+    background:var(--accent);color:#1a1407;border:0;border-radius:6px;
+    font-family:var(--mono);font-size:12px;font-weight:700;
+    letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;
+  }
+  .action-btn:disabled{background:var(--rule);color:var(--ink-muted);cursor:default}
+  .action-btn.loading{background:var(--panel);color:var(--accent);border:1px solid var(--accent)}
+  .action-btn.secondary{
+    flex:0 0 auto;background:transparent;color:var(--ink);
+    border:1px solid var(--rule);
+  }
+  .action-btn.secondary:hover{border-color:var(--accent);color:var(--accent)}
+  .action-btn.secondary.saved{color:var(--ok);border-color:var(--ok)}
+
+  /* Back-compat — keep .check-btn working if anything else uses it */
+  .check-btn{
+    width:100%;margin-top:12px;padding:14px;min-height:48px;
+    background:var(--accent);color:#1a1407;border:0;border-radius:6px;
+    font-family:var(--mono);font-size:12px;font-weight:700;
+    letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;
+  }
+  .check-btn:disabled{background:var(--rule);color:var(--ink-muted);cursor:default}
+  .check-btn.loading{background:var(--panel);color:var(--accent);border:1px solid var(--accent)}
+
+  /* Modal backdrop */
+  .modal-bg{
+    position:fixed;inset:0;z-index:900;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    display:none;
+    animation:fadeIn 0.15s ease-out;
+  }
+  .modal-bg.open{display:flex;align-items:flex-end;justify-content:center}
+  @media (min-width:600px){
+    .modal-bg.open{align-items:center}
+  }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  /* Modal sheet */
+  .modal{
+    background:var(--bg-2);border:1px solid var(--rule);
+    width:100%;max-width:520px;max-height:85vh;
+    border-radius:16px 16px 0 0;
+    display:flex;flex-direction:column;overflow:hidden;
+    animation:slideUp 0.2s ease-out;
+  }
+  @media (min-width:600px){
+    .modal{border-radius:12px;margin:0 20px}
+  }
+  @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px;border-bottom:1px solid var(--rule);
+  }
+  .modal-title{
+    font-family:var(--serif);font-weight:600;font-style:italic;
+    font-size:22px;letter-spacing:-0.02em;color:var(--ink);
+  }
+  .modal-close{
+    background:transparent;border:0;color:var(--ink-dim);cursor:pointer;
+    width:36px;height:36px;font-size:24px;line-height:1;
+    display:flex;align-items:center;justify-content:center;border-radius:50%;
+  }
+  .modal-close:hover{background:var(--panel);color:var(--ink)}
+
+  .modal-body{
+    flex:1;overflow-y:auto;
+    padding:6px 0;
+  }
+
+  /* Saved spot row */
+  .saved-row{
+    display:flex;align-items:stretch;border-bottom:1px solid var(--rule);
+  }
+  .saved-row:last-child{border-bottom:0}
+  .saved-main{
+    flex:1;min-width:0;padding:14px 18px;cursor:pointer;
+    background:transparent;border:0;color:inherit;text-align:left;
+    font-family:var(--sans);
+  }
+  .saved-main:hover{background:var(--panel)}
+  .saved-name{
+    color:var(--ink);font-size:15px;font-weight:500;line-height:1.25;
+    display:flex;align-items:center;gap:8px;
+  }
+  .saved-dot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  }
+  .saved-dot.ok{background:var(--ok)}
+  .saved-dot.warn{background:var(--warn)}
+  .saved-dot.bad{background:var(--bad)}
+  .saved-dot.idle{background:var(--ink-muted)}
+  .saved-meta{
+    font-family:var(--mono);font-size:10.5px;color:var(--ink-muted);
+    margin-top:4px;letter-spacing:0.04em;
+  }
+  .saved-actions{display:flex;align-items:stretch;flex-shrink:0}
+  .saved-icon-btn{
+    background:transparent;border:0;border-left:1px solid var(--rule);
+    color:var(--ink-dim);cursor:pointer;
+    width:52px;font-size:18px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .saved-icon-btn:hover{background:var(--panel);color:var(--accent)}
+  .saved-icon-btn.delete:hover{color:var(--bad)}
+
+  .modal-empty{
+    padding:40px 24px;text-align:center;color:var(--ink-muted);
+    font-size:13px;line-height:1.5;
+  }
+
+  /* Directions picker — list of options */
+  .pick-option{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 20px;cursor:pointer;
+    background:transparent;border:0;border-bottom:1px solid var(--rule);
+    color:inherit;text-align:left;width:100%;
+    font-family:var(--sans);
+  }
+  .pick-option:last-child{border-bottom:0}
+  .pick-option:hover{background:var(--panel)}
+  .pick-icon{
+    width:36px;height:36px;border-radius:8px;
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;flex-shrink:0;
+  }
+  .pick-label{
+    font-size:15px;color:var(--ink);font-weight:500;
+  }
+  .pick-detail{
+    font-size:11px;color:var(--ink-muted);margin-top:2px;
+    font-family:var(--mono);
+  }
+
+  /* Save-name prompt */
+  .save-prompt{padding:18px}
+  .save-prompt input{
+    width:100%;padding:12px 14px;
+    background:var(--panel);border:1px solid var(--rule);border-radius:6px;
+    color:var(--ink);font-family:var(--sans);font-size:15px;outline:0;
+    margin-bottom:14px;
+  }
+  .save-prompt input:focus{border-color:var(--accent)}
+  .save-prompt-actions{display:flex;gap:10px;justify-content:flex-end}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(24px + env(safe-area-inset-bottom));z-index:950;
+    background:var(--ink);color:var(--bg);
+    padding:10px 18px;border-radius:24px;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+    box-shadow:0 6px 24px rgba(0,0,0,0.5);
+    opacity:0;pointer-events:none;
+    transition:opacity 0.2s;
+  }
+  .toast.show{opacity:1}
+
   .spinner{
     display:inline-block;width:10px;height:10px;border:1.5px solid var(--ink-muted);
     border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;
@@ -1019,7 +1183,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="hdr-sub">Utah · BLM surface data</div>
     </div>
     <div class="hdr-spacer"></div>
-    <button class="hdr-loc-btn" id="locBtn">My location</button>
+    <button class="hdr-loc-btn" id="savedBtn">Saved</button>
+    <button class="hdr-loc-btn" id="locBtn">Location</button>
   </div>
   <div class="search-box">
     <input id="searchInput" class="search-input" type="search"
@@ -1070,7 +1235,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <dt>Unit</dt><dd id="fUnit">—</dd>
     <dt>Flags</dt><dd id="fFlags">—</dd>
   </dl>
-  <button class="check-btn" id="checkBtn">Check this spot</button>
+  <div class="verdict-actions">
+    <button class="action-btn" id="checkBtn">Check this spot</button>
+    <button class="action-btn secondary" id="saveBtn" title="Save this spot">Save</button>
+  </div>
   <div class="disclaimer">
     <strong>Reality check:</strong> This surfaces BLM ownership data and flags known Utah shooting-closure polygons. Seasonal fire closures, private leases, and local ordinances are not covered. Always confirm on the ground.
   </div>
@@ -1589,6 +1757,355 @@ const btn2 = btn;
 /* Auto-check on initial load */
 setTimeout(() => btn.click(), 400);
 
+/* ============================================================
+   Saved spots — localStorage persistence
+   ============================================================ */
+const STORAGE_KEY = 'can-i-shoot-here:saved-v1';
+let lastVerdict = null;  // populated after each successful check
+
+function loadSaved() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+function writeSaved(arr) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+  catch (e) { console.warn('Storage write failed:', e); }
+}
+
+/* Toast for small confirmations */
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* Modal open/close */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.getElementById('savedClose').onclick = () => closeModal('savedModal');
+document.getElementById('saveClose').onclick  = () => closeModal('saveModal');
+document.getElementById('dirsClose').onclick  = () => closeModal('dirsModal');
+// Backdrop click closes
+['savedModal','saveModal','dirsModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target.id === id) closeModal(id);
+  });
+});
+// Escape closes any open modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['savedModal','saveModal','dirsModal'].forEach(id => closeModal(id));
+  }
+});
+
+/* Track verdict state so Save knows what to store */
+function captureVerdict(lat, lng) {
+  const headline = el('vHeadline');
+  const kind = ['ok','warn','bad','idle'].find(k => headline.classList.contains(k)) || 'idle';
+  return {
+    lat, lng,
+    kind,
+    headline: headline.textContent,
+    surface: el('fSurface').textContent,
+    agency: el('fAgency').textContent,
+    unit: el('fUnit').textContent
+  };
+}
+
+/* Hook into renderVerdict to cache the last one */
+const _origRender = renderVerdict;
+renderVerdict = function(lat, lng, blmJson) {
+  _origRender(lat, lng, blmJson);
+  lastVerdict = captureVerdict(lat, lng);
+};
+
+/* ============================================================
+   Save button flow
+   ============================================================ */
+const saveBtn = document.getElementById('saveBtn');
+const saveNameInput = document.getElementById('saveNameInput');
+
+saveBtn.onclick = () => {
+  // Determine coords — prefer last verdict, else current crosshair
+  const c = lastVerdict ? {lat: lastVerdict.lat, lng: lastVerdict.lng} : getCrosshairLatLng();
+  // Suggest a default name based on verdict or coords
+  let suggested;
+  if (lastVerdict && lastVerdict.kind === 'ok') suggested = `${lastVerdict.agency} spot`;
+  else if (lastVerdict) suggested = lastVerdict.surface;
+  else suggested = `Spot @ ${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}`;
+  saveNameInput.value = suggested;
+  saveNameInput.dataset.lat = c.lat;
+  saveNameInput.dataset.lng = c.lng;
+  openModal('saveModal');
+  setTimeout(() => { saveNameInput.focus(); saveNameInput.select(); }, 100);
+};
+
+document.getElementById('saveCancel').onclick = () => closeModal('saveModal');
+document.getElementById('saveConfirm').onclick = confirmSave;
+saveNameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); confirmSave(); }
+});
+
+function confirmSave() {
+  const name = saveNameInput.value.trim() || 'Untitled spot';
+  const lat = parseFloat(saveNameInput.dataset.lat);
+  const lng = parseFloat(saveNameInput.dataset.lng);
+  const list = loadSaved();
+  list.unshift({
+    id: String(Date.now()),
+    name,
+    lat, lng,
+    verdict: lastVerdict ? {
+      kind: lastVerdict.kind,
+      surface: lastVerdict.surface,
+      agency: lastVerdict.agency,
+      unit: lastVerdict.unit
+    } : null,
+    savedAt: Date.now()
+  });
+  writeSaved(list);
+  closeModal('saveModal');
+  toast('Saved');
+  // Briefly flash the saved-state on the button
+  saveBtn.classList.add('saved');
+  saveBtn.textContent = 'Saved ✓';
+  setTimeout(() => {
+    saveBtn.classList.remove('saved');
+    saveBtn.textContent = 'Save';
+  }, 1500);
+}
+
+/* ============================================================
+   Saved list modal
+   ============================================================ */
+document.getElementById('savedBtn').onclick = () => {
+  renderSavedList();
+  openModal('savedModal');
+};
+
+function renderSavedList() {
+  const list = loadSaved();
+  const container = document.getElementById('savedList');
+  if (!list.length) {
+    container.innerHTML = '<div class="modal-empty">No saved spots yet.<br>Aim the crosshair, tap Check, then Save to remember a spot.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  list.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'saved-row';
+
+    const main = document.createElement('button');
+    main.className = 'saved-main';
+    const kind = (item.verdict && item.verdict.kind) || 'idle';
+    const surface = (item.verdict && item.verdict.surface) || '—';
+    main.innerHTML = `
+      <div class="saved-name">
+        <span class="saved-dot ${kind}"></span>
+        <span>${escapeHtml(item.name)}</span>
+      </div>
+      <div class="saved-meta">${surface} · ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
+    `;
+    main.onclick = () => {
+      closeModal('savedModal');
+      map.setView([item.lat, item.lng], 15);
+      setTimeout(() => btn.click(), 400);
+    };
+
+    const dirsButton = document.createElement('button');
+    dirsButton.className = 'saved-icon-btn';
+    dirsButton.title = 'Get directions';
+    dirsButton.innerHTML = '➤';
+    dirsButton.onclick = (e) => {
+      e.stopPropagation();
+      openDirectionsPicker(item);
+    };
+
+    const delButton = document.createElement('button');
+    delButton.className = 'saved-icon-btn delete';
+    delButton.title = 'Delete';
+    delButton.innerHTML = '×';
+    delButton.onclick = (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete "${item.name}"?`)) {
+        const updated = loadSaved().filter(s => s.id !== item.id);
+        writeSaved(updated);
+        renderSavedList();
+        toast('Deleted');
+      }
+    };
+
+    const actions = document.createElement('div');
+    actions.className = 'saved-actions';
+    actions.appendChild(dirsButton);
+    actions.appendChild(delButton);
+
+    row.appendChild(main);
+    row.appendChild(actions);
+    container.appendChild(row);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+/* ============================================================
+   Directions picker — opens in whatever maps app the user chooses
+   ============================================================ */
+function openDirectionsPicker(spot) {
+  const container = document.getElementById('dirsOptions');
+  const {lat, lng, name} = spot;
+  const label = encodeURIComponent(name || 'Shooting spot');
+  const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+  // Build destinations. Each destination is {label, detail, url, icon}
+  const options = [
+    {
+      label: 'Apple Maps',
+      detail: 'iOS / macOS default',
+      icon: '🗺',
+      url: `https://maps.apple.com/?daddr=${lat},${lng}&q=${label}`
+    },
+    {
+      label: 'Google Maps',
+      detail: 'Opens app if installed',
+      icon: '📍',
+      url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+    },
+    {
+      label: 'Waze',
+      detail: 'Traffic-aware',
+      icon: '🚗',
+      url: `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`
+    },
+    {
+      label: 'Gaia GPS',
+      detail: 'Backcountry nav',
+      icon: '🏔',
+      url: `gaiagps://map?lat=${lat}&lon=${lng}&zoom=14`,
+      fallback: `https://www.gaiagps.com/map/?loc=14/${lng}/${lat}`
+    },
+    {
+      label: 'Copy coordinates',
+      detail: coordStr,
+      icon: '⧉',
+      action: async () => {
+        try {
+          await navigator.clipboard.writeText(coordStr);
+          toast('Copied');
+        } catch {
+          // Fallback for non-HTTPS
+          const ta = document.createElement('textarea');
+          ta.value = coordStr; document.body.appendChild(ta);
+          ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+          toast('Copied');
+        }
+        closeModal('dirsModal');
+      }
+    },
+    {
+      label: 'Share…',
+      detail: 'System share sheet',
+      icon: '↗',
+      action: async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: name || 'Shooting spot',
+              text: `${name || 'Spot'}: ${coordStr}`,
+              url: `https://maps.apple.com/?ll=${lat},${lng}&q=${label}`
+            });
+          } catch {} // user cancelled, ignore
+        } else {
+          toast('Share not supported here');
+        }
+        closeModal('dirsModal');
+      }
+    }
+  ];
+
+  container.innerHTML = '';
+  options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'pick-option';
+    b.innerHTML = `
+      <div class="pick-icon">${opt.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="pick-label">${escapeHtml(opt.label)}</div>
+        <div class="pick-detail">${escapeHtml(opt.detail)}</div>
+      </div>
+    `;
+    b.onclick = () => {
+      if (opt.action) { opt.action(); return; }
+      // Open in new window/tab/app
+      try {
+        // For app-scheme URLs, also queue a web fallback
+        if (opt.fallback) {
+          const timer = setTimeout(() => { window.location = opt.fallback; }, 1500);
+          window.addEventListener('blur', () => clearTimeout(timer), {once:true});
+        }
+        window.location.href = opt.url;
+      } catch (e) {
+        window.open(opt.url, '_blank');
+      }
+      closeModal('dirsModal');
+    };
+    container.appendChild(b);
+  });
+  openModal('dirsModal');
+}
+
 </script>
+<!-- Modals -->
+<div class="modal-bg" id="savedModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Saved spots</div>
+      <button class="modal-close" id="savedClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="savedList"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="saveModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Save this spot</div>
+      <button class="modal-close" id="saveClose" aria-label="Close">×</button>
+    </div>
+    <div class="save-prompt">
+      <input id="saveNameInput" type="text" placeholder="Name this spot (e.g. Cedar Valley backstop)" autocomplete="off" />
+      <div class="save-prompt-actions">
+        <button class="action-btn secondary" id="saveCancel">Cancel</button>
+        <button class="action-btn" id="saveConfirm">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dirsModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="modal-title">Get directions</div>
+      <button class="modal-close" id="dirsClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="dirsOptions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 </body>
 </html>

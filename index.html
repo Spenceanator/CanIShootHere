@@ -1161,6 +1161,51 @@ svg.leaflet-image-layer.leaflet-interactive path {
   }
   @keyframes spin{to{transform:rotate(360deg)}}
 
+  /* Mode toggle — segmented Shoot / Camp control */
+  .mode-ctl{
+    display:flex;gap:0;margin:0 4px 8px;
+    background:var(--panel-glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--rule);border-radius:8px;overflow:hidden;
+    box-shadow:0 4px 16px rgba(0,0,0,0.35);
+  }
+  .mode-btn{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+    background:transparent;border:0;color:var(--ink-dim);cursor:pointer;
+    padding:10px 12px;min-height:42px;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;
+  }
+  .mode-btn + .mode-btn{border-left:1px solid var(--rule)}
+  .mode-btn .mode-ico{font-size:15px;line-height:1}
+  .mode-btn:hover{color:var(--ink)}
+  .mode-btn.active{background:var(--bg-2);color:var(--accent)}
+
+  /* Fire-status line — camp mode only, color-coded */
+  .fire-status{
+    display:flex;align-items:center;gap:12px;
+    margin:2px 0 12px;padding:11px 13px;border-radius:10px;
+    border:1px solid var(--rule);background:var(--panel);
+  }
+  .fire-status.ok{border-color:var(--ok);background:var(--ok-bg)}
+  .fire-status.warn{border-color:var(--warn);background:var(--warn-bg)}
+  .fire-status.bad{border-color:var(--bad);background:var(--bad-bg)}
+  .fire-badge{font-size:20px;line-height:1;flex:0 0 auto}
+  .fire-text{flex:1;min-width:0}
+  .fire-headline{
+    font-family:var(--sans);font-size:14px;font-weight:600;line-height:1.25;color:var(--ink);
+  }
+  .fire-status.ok .fire-headline{color:var(--ok)}
+  .fire-status.warn .fire-headline{color:var(--warn)}
+  .fire-status.bad .fire-headline{color:var(--bad)}
+  .fire-sub{font-family:var(--mono);font-size:10px;color:var(--ink-dim);margin-top:3px;letter-spacing:0.04em}
+
+  /* Saved-spot mode chip */
+  .saved-mode-chip{
+    display:inline-block;font-family:var(--mono);font-size:8.5px;letter-spacing:0.1em;
+    text-transform:uppercase;padding:1px 5px;border-radius:4px;margin-left:6px;
+    border:1px solid var(--rule);color:var(--ink-dim);vertical-align:1px;
+  }
+  .saved-mode-chip.camp{border-color:var(--ok);color:var(--ok)}
+
   /* =====================================================
      Desktop / wide screen: sidebar layout
      ===================================================== */
@@ -1226,6 +1271,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <button class="hdr-loc-btn" id="savedBtn">Saved</button>
     <button class="hdr-loc-btn" id="locBtn">Location</button>
   </div>
+  <div class="mode-ctl" id="modeCtl">
+    <button class="mode-btn active" id="modeShoot" data-mode="shoot"><span class="mode-ico">⌖</span>Shoot</button>
+    <button class="mode-btn" id="modeCamp" data-mode="camp"><span class="mode-ico">⛺</span>Camp</button>
+  </div>
   <div class="search-box">
     <input id="searchInput" class="search-input" type="search"
       placeholder="Search place, address, or paste coords"
@@ -1278,12 +1327,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <dt>Unit</dt><dd id="fUnit">—</dd>
     <dt>Flags</dt><dd id="fFlags">—</dd>
   </dl>
+  <div class="fire-status" id="fireStatus" style="display:none">
+    <div class="fire-badge" id="fireBadge">🔥</div>
+    <div class="fire-text">
+      <div class="fire-headline" id="fireHeadline">—</div>
+      <div class="fire-sub" id="fireSub"></div>
+    </div>
+  </div>
   <div class="verdict-actions">
     <button class="action-btn" id="checkBtn">Check this spot</button>
     <button class="action-btn secondary" id="saveBtn" title="Save this spot">Save</button>
   </div>
   <div class="disclaimer">
-    <strong>Reality check:</strong> This surfaces BLM ownership data and flags known Utah shooting-closure polygons. Seasonal fire closures, private leases, and local ordinances are not covered. Always confirm on the ground. <a class="sources-link" id="sourcesLink">View sources →</a>
+    <strong>Reality check:</strong> <span id="disclaimerText">This surfaces BLM ownership data and flags known Utah shooting-closure polygons. Seasonal fire closures, private leases, and local ordinances are not covered. Always confirm on the ground.</span> <a class="sources-link" id="sourcesLink">View sources →</a>
   </div>
 </div>
 
@@ -1426,6 +1482,110 @@ const AGENCY_LABELS = {
 };
 
 /* ============================================================
+   CAMP MODE — agency ruleset for dispersed camping.
+   Same BLM SMA identify data, different verdict rules.
+   camp: 'green' (yes) | 'amber' (probably, check) | 'red' (no)
+   ============================================================ */
+const CAMP_AGENCY = {
+  "BLM":  {camp:"green", msg:"BLM land. Dispersed camping is generally allowed unless posted otherwise. 14-day limit, camp on existing disturbed sites, 200ft from water."},
+  "FS":   {camp:"green", msg:"National Forest. Dispersed camping generally allowed outside designated wilderness. No motor vehicles off existing roads/trails; obey any travel-management restrictions."},
+  "USFS": {camp:"green", msg:"National Forest. Dispersed camping generally allowed outside designated wilderness. No motor vehicles off existing roads/trails; obey any travel-management restrictions."},
+  "SITLA":{camp:"green", msg:"State Trust (SITLA) land. Dispersed camping is generally permitted; some parcels require a permit or are leased. Verify before a long stay."},
+  "ST":   {camp:"amber", msg:"State land. If this is a State Park, camping is by reservation in designated sites only. Verify the managing agency."},
+  "BIA":  {camp:"amber", msg:"Tribal land. Camping typically requires a tribal permit. Contact the tribe before setting up."},
+  "TRIB": {camp:"amber", msg:"Tribal land. Camping typically requires a tribal permit. Contact the tribe before setting up."},
+  "BOR":  {camp:"amber", msg:"Bureau of Reclamation land. Camping rules vary by project area — often designated sites only. Verify before staying."},
+  "NPS":  {camp:"red",   msg:"National Park Service land. Camping is allowed only in designated campgrounds (and permitted backcountry zones). No dispersed car camping."},
+  "FWS":  {camp:"red",   msg:"National Wildlife Refuge. Camping is restricted to designated sites where it is allowed at all."},
+  "DOD":  {camp:"red",   msg:"Military / Department of Defense land. Not open to public camping."},
+  "DOE":  {camp:"red",   msg:"Department of Energy land. Not open to public camping."},
+  "PVT":  {camp:"red",   msg:"Private land. No camping without the landowner's permission."},
+  "PRI":  {camp:"red",   msg:"Private land. No camping without the landowner's permission."},
+  "LOC":  {camp:"red",   msg:"Local government land. Camping is generally not permitted outside designated facilities."}
+};
+
+/* Camping-specific closures: areas where dispersed camping is restricted to
+   designated sites (notably the Moab high-use corridors). Rough digitizations
+   from BLM Moab Field Office dispersed-camping maps — flag, not gospel. Inside
+   one of these, a GREEN agency verdict is downgraded to AMBER. */
+const CAMP_CLOSURES = [
+  {
+    name: "Moab / Colorado River corridor — designated sites only",
+    authority: "BLM Moab FO",
+    note: "Dispersed camping prohibited along the Hwy 128 river corridor and around Moab. Camp only in designated fee sites marked with brown posts.",
+    coords: [
+      [38.730, -109.620],
+      [38.660, -109.520],
+      [38.610, -109.480],
+      [38.560, -109.480],
+      [38.520, -109.520],
+      [38.540, -109.580],
+      [38.580, -109.600],
+      [38.640, -109.620],
+      [38.690, -109.640],
+      [38.730, -109.620]
+    ]
+  },
+  {
+    name: "Sand Flats / Hwy 313–Gemini Bridges area — designated sites only",
+    authority: "BLM Moab FO",
+    note: "High-use recreation area near Moab. Dispersed camping restricted to designated sites; check current BLM signage and the Moab dispersed-camping map.",
+    coords: [
+      [38.620, -109.430],
+      [38.600, -109.360],
+      [38.560, -109.350],
+      [38.540, -109.400],
+      [38.560, -109.440],
+      [38.600, -109.450],
+      [38.620, -109.430]
+    ]
+  }
+];
+
+/* ============================================================
+   FIRE RESTRICTION query config.
+   Primary: USFS Region 4 (Intermountain) fire-restriction FeatureServer.
+   NOTE: endpoint not externally verifiable from the build sandbox — it is
+   queried live in the browser. If it is unreachable or returns nothing, the
+   verdict shows "unable to verify" and NEVER a false green. Swap URLs here if
+   the service path changes. Fallback slot left for a NIFC layer.
+   ============================================================ */
+const FIRE_ENDPOINTS = [
+  { url: "https://apps.fs.usda.gov/fsgisx02/rest/services/r04/r04_FireRestriction_01/FeatureServer/0",
+    label: "USFS Region 4 fire restrictions" }
+];
+
+/* Ownership legend rows per mode (rendered into .overlay-legend). */
+const LEGENDS = {
+  shoot: [
+    ["#f3de81","BLM — generally OK"],
+    ["#8fc971","National Forest — generally OK"],
+    ["#c6a7d7","National Park — no shooting"],
+    ["#86c8a8","Wildlife Refuge — no shooting"],
+    ["#f0b3ca","Military — no shooting"],
+    ["#7cb2f3","State Trust (SITLA) — check rules"],
+    ["#bfb794","State WMA — check rules"],
+    ["#f2b376","Tribal — no shooting"],
+    ["__priv__","Uncolored — private"]
+  ],
+  camp: [
+    ["#f3de81","BLM — dispersed OK"],
+    ["#8fc971","National Forest — dispersed OK (no wilderness vehicles)"],
+    ["#c6a7d7","National Park — designated sites only"],
+    ["#86c8a8","Wildlife Refuge — designated only"],
+    ["#f0b3ca","Military — no camping"],
+    ["#7cb2f3","State Trust (SITLA) — dispersed OK"],
+    ["#bfb794","State Parks / WMA — designated only"],
+    ["#f2b376","Tribal — permit required"],
+    ["__priv__","Uncolored — private"]
+  ]
+};
+
+/* App mode: 'shoot' (default, original behavior) or 'camp'. */
+let appMode = 'shoot';
+let lastFire = null;   // cached fire result from the most recent camp check
+
+/* ============================================================
    Map setup — smoother zoom, no default zoom control (we have custom)
    ============================================================ */
 const START = [40.382, -111.959]; // Eagle Mountain
@@ -1558,6 +1718,19 @@ CLOSURES.forEach(c => {
     fillOpacity: 0.15,
     dashArray: '4 3'
   }).addTo(closureLayer);
+});
+
+// Camp-mode closure overlay (designated-only areas). Built but not added to the
+// map until camp mode is active; setMode() swaps the two layers.
+const campClosureLayer = L.layerGroup();
+CAMP_CLOSURES.forEach(c => {
+  L.polygon(c.coords, {
+    color: '#d9a441',
+    weight: 1.5,
+    fillColor: '#d9a441',
+    fillOpacity: 0.12,
+    dashArray: '5 4'
+  }).addTo(campClosureLayer);
 });
 
 /* ============================================================
@@ -1723,10 +1896,23 @@ btn.onclick = async () => {
   btn.classList.add('loading');
   btn.innerHTML = '<span class="spinner"></span>Checking…';
   setBadge('idle', '…');
-  setHeadline('idle', 'Querying BLM…', 'Identifying surface management at this point.');
+  setHeadline('idle',
+    appMode === 'camp' ? 'Querying land + fire…' : 'Querying BLM…',
+    appMode === 'camp' ? 'Checking surface ownership and fire status at this point.' : 'Identifying surface management at this point.');
   try {
-    const data = await identifyBLM(c.lat, c.lng);
-    renderVerdict(c.lat, c.lng, data);
+    if (appMode === 'camp') {
+      // Land ownership and fire restrictions in parallel. identifyFire never
+      // throws — it resolves to an 'unverified' result on any failure — so a
+      // BLM outage still lands in catch while fire degrades safely.
+      const [data, fire] = await Promise.all([
+        identifyBLM(c.lat, c.lng),
+        identifyFire(c.lat, c.lng)
+      ]);
+      renderCampVerdict(c.lat, c.lng, data, fire);
+    } else {
+      const data = await identifyBLM(c.lat, c.lng);
+      renderVerdict(c.lat, c.lng, data);
+    }
   } catch (e) {
     setBadge('warn', '!');
     setHeadline('warn', 'Lookup failed', 'Could not reach BLM service. Check connection and try again.');
@@ -1933,10 +2119,12 @@ function captureVerdict(lat, lng) {
   return {
     lat, lng,
     kind,
+    mode: appMode,
     headline: headline.textContent,
     surface: el('fSurface').textContent,
     agency: el('fAgency').textContent,
-    unit: el('fUnit').textContent
+    unit: el('fUnit').textContent,
+    fire: (appMode === 'camp' && lastFire) ? {stage: lastFire.stage, status: lastFire.status} : null
   };
 }
 
@@ -2049,11 +2237,13 @@ function confirmSave() {
     id: String(Date.now()),
     name,
     lat, lng,
+    mode: (lastVerdict && lastVerdict.mode) || appMode,
     verdict: lastVerdict ? {
       kind: lastVerdict.kind,
       surface: lastVerdict.surface,
       agency: lastVerdict.agency,
-      unit: lastVerdict.unit
+      unit: lastVerdict.unit,
+      fire: lastVerdict.fire || null
     } : null,
     savedAt: Date.now()
   });
@@ -2103,15 +2293,18 @@ function renderSavedList() {
     main.className = 'saved-main';
     const kind = (item.verdict && item.verdict.kind) || 'idle';
     const surface = (item.verdict && item.verdict.surface) || '—';
+    const itemMode = item.mode || 'shoot';
+    const modeChip = `<span class="saved-mode-chip ${itemMode === 'camp' ? 'camp' : ''}">${itemMode === 'camp' ? '⛺ camp' : '⌖ shoot'}</span>`;
     main.innerHTML = `
       <div class="saved-name">
         <span class="saved-dot ${kind}"></span>
-        <span>${escapeHtml(item.name)}</span>
+        <span>${escapeHtml(item.name)}</span>${modeChip}
       </div>
       <div class="saved-meta">${surface} · ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}</div>
     `;
     main.onclick = () => {
       closeModal('savedModal');
+      if (itemMode !== appMode) setMode(itemMode);
       map.setView([item.lat, item.lng], 15);
       setTimeout(() => btn.click(), 400);
     };
@@ -2275,6 +2468,214 @@ function openDirectionsPicker(spot) {
 }
 
 /* ============================================================
+   CAMP MODE — fire restriction query
+   ============================================================ */
+// Display config per fire stage. Stage 0 (green) is ONLY shown when a service
+// actually responded with no active restriction. Any failure → 'unverified'.
+const FIRE_LEVELS = {
+  0: {kind:'ok',   badge:'🔥', headline:'Campfires allowed (check local signage)'},
+  1: {kind:'warn', badge:'⚠️', headline:'Stage 1: No campfires with solid fuel. Gas/propane stoves OK.'},
+  2: {kind:'bad',  badge:'⛔', headline:'Stage 2: No campfires, no smoking outside vehicles.'},
+  3: {kind:'bad',  badge:'⛔', headline:'Stage 3: Area closed. Do not enter.'}
+};
+
+// Query one ArcGIS FeatureServer layer for restriction polygons at a point.
+async function queryFireLayer(layerUrl, lat, lng) {
+  const url = layerUrl + '/query'
+    + '?f=json'
+    + `&geometry=${lng},${lat}`
+    + '&geometryType=esriGeometryPoint'
+    + '&inSR=4326'
+    + '&spatialRel=esriSpatialRelIntersects'
+    + '&outFields=*'
+    + '&returnGeometry=false';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('fire service ' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error('fire service error');
+  return data.features || [];
+}
+
+// Inspect feature attributes for a stage. Scans every string attribute value so
+// it tolerates field-name differences (ordertype, ORDER_TYPE, RestrictionType…).
+function classifyFireFeatures(features) {
+  let stage = 0;
+  for (const f of features) {
+    const blob = Object.values(f.attributes || {})
+      .filter(v => typeof v === 'string').join(' ').toLowerCase();
+    if (/stage\s*3|closure|area closed|forest closure/.test(blob)) stage = Math.max(stage, 3);
+    else if (/stage\s*2/.test(blob)) stage = Math.max(stage, 2);
+    else if (/stage\s*1|restriction/.test(blob)) stage = Math.max(stage, 1);
+    else stage = Math.max(stage, 1); // a returned polygon with no parseable stage = some restriction
+  }
+  return stage;
+}
+
+// Returns {stage:0|1|2|3|null, status:'none'|'active'|'unverified', source}.
+// NEVER throws — a failure resolves to 'unverified' so the verdict can't show
+// a false green on fire.
+async function identifyFire(lat, lng) {
+  for (const ep of FIRE_ENDPOINTS) {
+    try {
+      const feats = await queryFireLayer(ep.url, lat, lng);
+      if (feats.length === 0) return {stage:0, status:'none', source:ep.label};
+      const stage = classifyFireFeatures(feats);
+      return {stage, status:'active', source:ep.label};
+    } catch (e) {
+      console.warn('Fire endpoint failed:', ep.label, e);
+      // try next endpoint
+    }
+  }
+  return {stage:null, status:'unverified', source:null};
+}
+
+// Paint the fire-status line in the verdict panel.
+function renderFireStatus(fire) {
+  const box = el('fireStatus');
+  box.style.display = 'flex';
+  if (!fire || fire.status === 'unverified') {
+    box.className = 'fire-status warn';
+    el('fireBadge').textContent = '⚠️';
+    el('fireHeadline').textContent = 'Fire restrictions: unable to verify';
+    el('fireSub').textContent = 'Check utahfireinfo.gov before lighting any fire.';
+    return;
+  }
+  const lvl = FIRE_LEVELS[fire.stage] || FIRE_LEVELS[1];
+  box.className = 'fire-status ' + lvl.kind;
+  el('fireBadge').textContent = lvl.badge;
+  el('fireHeadline').textContent = lvl.headline;
+  el('fireSub').textContent = fire.source
+    ? `Source: ${fire.source}. Verify on the ground.`
+    : 'Verify current restrictions on the ground.';
+}
+
+/* ============================================================
+   CAMP MODE — verdict rendering
+   ============================================================ */
+function renderCampVerdict(lat, lng, blmJson, fire) {
+  const primary = pickPrimary(blmJson.results);
+  const agencyCode = primary ? primary.code : 'UNK';
+  const agencyInfo = AGENCY_LABELS[agencyCode] || {label: agencyCode};
+  const rule = CAMP_AGENCY[agencyCode] || null;
+  const unit = (primary && primary.row.attributes.ADMIN_UNIT_NAME && primary.row.attributes.ADMIN_UNIT_NAME !== 'Null')
+    ? primary.row.attributes.ADMIN_UNIT_NAME : null;
+
+  el('fCoord').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  el('fSurface').textContent = agencyInfo.label;
+  el('fSurface').className = '';
+  el('fAgency').textContent = agencyCode;
+  el('fUnit').textContent = unit || '—';
+  el('fUnit').className = unit ? '' : 'val-none';
+
+  // Camp closure flags (designated-only areas)
+  const closures = CAMP_CLOSURES.filter(c => pointInPolygon(lat, lng, c.coords));
+  const flagsEl = el('fFlags');
+  flagsEl.innerHTML = '';
+  if (closures.length === 0) {
+    flagsEl.innerHTML = '<span style="color:var(--ink-muted)">none on file</span>';
+  } else {
+    closures.forEach(c => {
+      const sp = document.createElement('span');
+      sp.className = 'flag';
+      sp.textContent = c.authority + ' · designated sites only';
+      sp.title = c.note;
+      flagsEl.appendChild(sp);
+    });
+  }
+
+  showFields(true);
+
+  // Base verdict from agency rule, then downgrade green→amber inside a closure.
+  let level = rule ? rule.camp : 'unknown';
+  let detail = rule ? rule.msg : null;
+  if (level === 'green' && closures.length > 0) {
+    level = 'amber';
+    detail = closures[0].note;
+  }
+
+  if (level === 'red') {
+    setBadge('bad', '✕');
+    setHeadline('bad', 'No — not open to camping', detail);
+  } else if (level === 'amber') {
+    setBadge('warn', '!');
+    setHeadline('warn', closures.length > 0 ? 'Designated sites only' : 'Probably — check rules', detail);
+  } else if (level === 'green') {
+    setBadge('ok', '✓');
+    setHeadline('ok', 'Likely OK to camp', detail);
+  } else {
+    setBadge('warn', '?');
+    setHeadline('warn', 'Unknown',
+      `Couldn't classify this parcel (code: ${agencyCode}). Cross-reference with an ownership map before camping.`);
+  }
+
+  // Fire status — always shown in camp mode, color-coded, never a false green.
+  lastFire = fire;
+  renderFireStatus(fire);
+
+  lastVerdict = captureVerdict(lat, lng);
+}
+
+/* ============================================================
+   Ownership legend — rebuilt per mode
+   ============================================================ */
+function renderLegend(mode) {
+  const box = document.querySelector('.overlay-legend');
+  if (!box) return;
+  box.innerHTML = LEGENDS[mode].map(([color, label]) => {
+    const swatch = color === '__priv__'
+      ? '<div class="legend-swatch" style="background:transparent;border:1px dashed var(--ink-muted)"></div>'
+      : `<div class="legend-swatch" style="background:${color}"></div>`;
+    return `<div class="legend-row">${swatch}${label}</div>`;
+  }).join('');
+}
+
+/* ============================================================
+   Mode switching — Shoot ⌖ / Camp ⛺
+   ============================================================ */
+function setMode(mode) {
+  appMode = mode;
+  document.getElementById('modeShoot').classList.toggle('active', mode === 'shoot');
+  document.getElementById('modeCamp').classList.toggle('active', mode === 'camp');
+
+  const titleEl = document.querySelector('.hdr-title');
+  const subEl = document.querySelector('.hdr-sub');
+  const discEl = document.getElementById('disclaimerText');
+
+  if (mode === 'camp') {
+    if (titleEl) titleEl.textContent = 'Can I camp here?';
+    if (subEl) subEl.textContent = 'Utah · land + fire status';
+    document.title = 'Can I Camp Here?';
+    if (discEl) discEl.textContent = 'This surfaces land ownership and live USFS fire-restriction data for dispersed camping. Designated-only areas, seasonal closures, and local rules may not be captured. Verify fire status on the ground before any flame.';
+    map.removeLayer(closureLayer);
+    campClosureLayer.addTo(map);
+  } else {
+    if (titleEl) titleEl.textContent = 'Can I shoot here?';
+    if (subEl) subEl.textContent = 'Utah · BLM surface data';
+    document.title = 'Can I Shoot Here?';
+    if (discEl) discEl.textContent = 'This surfaces BLM ownership data and flags known Utah shooting-closure polygons. Seasonal fire closures, private leases, and local ordinances are not covered. Always confirm on the ground.';
+    map.removeLayer(campClosureLayer);
+    closureLayer.addTo(map);
+    el('fireStatus').style.display = 'none';
+  }
+
+  renderLegend(mode);
+
+  // Reset the verdict to idle, then re-evaluate the current crosshair point.
+  showFields(false);
+  el('fireStatus').style.display = 'none';
+  setBadge('idle', '?');
+  setHeadline('idle', 'Aim the crosshair, tap Check',
+    mode === 'camp' ? 'Check land ownership and fire status for this spot.' : 'Pan and zoom to a spot, then check its surface ownership.');
+  btn.click();
+}
+
+document.getElementById('modeShoot').onclick = () => setMode('shoot');
+document.getElementById('modeCamp').onclick  = () => setMode('camp');
+
+// Render the initial (shoot) legend from the single source of truth.
+renderLegend(appMode);
+
+/* ============================================================
    Sources / About modal
    ============================================================ */
 // Static source registry — facts known at build time
@@ -2337,6 +2738,33 @@ const SOURCES = {
       source: 'Utah DWR',
       origYear: 2020,
       url: 'https://wildlife.utah.gov/news/utah-wildlife-news/1068-dwr-closes-part-of-santaquin-wma-shooting.html'
+    }
+  ],
+  fire: [
+    {
+      name: 'USFS Region 4 fire restrictions (queried live)',
+      desc: 'In camp mode the app queries this FeatureServer at the checked point for active fire restriction / closure polygons (Stage 1/2/3). If it is unreachable or returns nothing usable, the verdict shows "unable to verify" rather than a false green.',
+      url: 'https://apps.fs.usda.gov/fsgisx02/rest/services/r04/r04_FireRestriction_01/FeatureServer',
+      staticFreshness: 'queried live'
+    },
+    {
+      name: 'Utah Fire Info — restrictions & closures',
+      desc: 'Authoritative human-readable list of current BLM, state, and federal fire restrictions across Utah. Always verify here before lighting any fire.',
+      url: 'https://utahfireinfo.gov/',
+      staticFreshness: 'verify here'
+    },
+    {
+      name: 'BLM Utah fire restrictions',
+      desc: 'BLM regional fire-restriction notices by Utah field office. As of mid-June 2026, Stage 1 restrictions were active across much of north/central and southern Utah — but the app queries live and you should confirm here.',
+      url: 'https://www.blm.gov/programs/fire/regional-info/utah/fire-restrictions',
+      staticFreshness: 'verify here'
+    }
+  ],
+  camping: [
+    {
+      name: 'Dispersed camping on BLM land — quick reference',
+      desc: 'Allowed on most public lands unless posted otherwise. Camp at least 200ft from water sources; 14-day stay limit, then move at least 25 miles; no facilities — pack out all trash and bury human waste 6–8in deep, 200ft from water; use existing fire rings when available and check fire restrictions before any open flame; keep motor vehicles on existing roads and trails. Some areas (notably near Moab) restrict dispersed camping to designated sites marked with brown posts.',
+      source: 'BLM dispersed camping guidance'
     }
   ]
 };
@@ -2410,6 +2838,8 @@ function openSourcesModal() {
     sectionHtml('Map basemap imagery', SOURCES.basemap),
     sectionHtml('Search & geocoding', SOURCES.geocoding),
     sectionHtml('Shooting-closure polygons', SOURCES.closures),
+    sectionHtml('Fire restrictions (camp mode)', SOURCES.fire),
+    sectionHtml('Dispersed camping rules (camp mode)', SOURCES.camping),
     `<div class="sources-section">
        <h3>Methodology notes</h3>
        <div class="sources-item">

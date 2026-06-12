@@ -1649,11 +1649,11 @@ window.addEventListener('resize', adjustForSidebar);
 
 const satTiles = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  {attribution:'Imagery © Esri', maxZoom:19}
+  {attribution:'Imagery © Esri', maxZoom:19, zIndex:1}
 );
 const topoTiles = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}',
-  {attribution:'Topo © Esri / USGS', maxZoom:15}
+  {attribution:'Topo © Esri / USGS', maxZoom:15, zIndex:1}
 );
 satTiles.addTo(map);
 
@@ -1686,7 +1686,8 @@ const ownershipOverlay = new OwnershipTileLayer({
   attribution: 'Ownership © Utah SITLA',
   maxZoom: 18,
   minZoom: 6,
-  opacity: 0.5
+  opacity: 0.5,
+  zIndex: 10
 }).addTo(map);
 
 // Toggle logic
@@ -1767,15 +1768,25 @@ let tileErrorCount = 0;
   });
 });
 
+// Keep the ownership overlay above whichever basemap is active. zIndex handles
+// this on its own, but bringToFront() also defeats Leaflet's tile fade-in, which
+// is what made the color overlay appear to tween back to transparent on swap.
+function keepOverlayOnTop() {
+  if (overlayCtl.classList.contains('on') && map.hasLayer(ownershipOverlay)) {
+    ownershipOverlay.bringToFront();
+  }
+}
 document.getElementById('bm-sat').onclick = () => {
   map.removeLayer(topoTiles); satTiles.addTo(map);
   document.getElementById('bm-sat').classList.add('active');
   document.getElementById('bm-topo').classList.remove('active');
+  keepOverlayOnTop();
 };
 document.getElementById('bm-topo').onclick = () => {
   map.removeLayer(satTiles); topoTiles.addTo(map);
   document.getElementById('bm-topo').classList.add('active');
   document.getElementById('bm-sat').classList.remove('active');
+  keepOverlayOnTop();
 };
 
 // Draw closure polygons as a reference overlay

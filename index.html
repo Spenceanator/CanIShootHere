@@ -854,8 +854,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
     display:none;
     padding:8px 12px 10px;
     border-top:1px solid var(--rule);
+    max-height:46vh;overflow-y:auto;
   }
-  .overlay-ctl.on .overlay-legend{display:block}
+  .legend-toggle{
+    background:transparent;border:0;color:var(--ink-dim);cursor:pointer;
+    font-size:13px;line-height:1;padding:4px 8px;margin-left:auto;
+    transition:transform 0.15s;
+  }
+  .overlay-ctl.legend-open .legend-toggle{transform:rotate(90deg);color:var(--accent)}
+  .overlay-ctl.legend-open .overlay-legend{display:block}
   .legend-row{
     display:flex;align-items:center;gap:8px;padding:3px 0;
     font-family:var(--sans);font-size:11px;color:var(--ink-dim);
@@ -867,23 +874,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
   /* Crosshair — subtle, not screaming */
   .xhair{
-    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-    pointer-events:none;z-index:450;width:44px;height:44px;
+    position:fixed;top:var(--xhair-top,50%);left:50%;transform:translate(-50%,-50%);
+    pointer-events:none;z-index:480;width:52px;height:52px;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));
   }
   .xhair::before,.xhair::after{
     content:"";position:absolute;background:var(--accent);
-    box-shadow:0 0 0 1px rgba(0,0,0,0.6);
+    box-shadow:0 0 0 1.5px rgba(0,0,0,0.85);
   }
-  .xhair::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-50%)}
-  .xhair::after{top:50%;left:0;height:1px;width:100%;transform:translateY(-50%)}
+  .xhair::before{left:50%;top:0;width:2px;height:100%;transform:translateX(-50%)}
+  .xhair::after{top:50%;left:0;height:2px;width:100%;transform:translateY(-50%)}
   .xhair-dot{
-    position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
+    position:absolute;top:50%;left:50%;width:7px;height:7px;border-radius:50%;
     background:var(--accent);transform:translate(-50%,-50%);
-    box-shadow:0 0 0 2px rgba(14,13,10,0.9);
+    box-shadow:0 0 0 2.5px rgba(14,13,10,0.95);
   }
   .xhair-ring{
-    position:absolute;top:50%;left:50%;width:22px;height:22px;border-radius:50%;
-    border:1px solid var(--accent);transform:translate(-50%,-50%);opacity:0.6;
+    position:absolute;top:50%;left:50%;width:26px;height:26px;border-radius:50%;
+    border:2px solid var(--accent);transform:translate(-50%,-50%);opacity:0.75;
+    box-shadow:0 0 0 1.5px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
 
   /* Verdict panel — bottom sheet on mobile, sidebar on desktop */
@@ -893,8 +902,22 @@ svg.leaflet-image-layer.leaflet-interactive path {
     border-top:1px solid var(--rule);
     padding:14px 16px calc(16px + env(safe-area-inset-bottom));
     box-shadow:0 -4px 24px rgba(0,0,0,0.5);
-    max-height:60vh;overflow-y:auto;
+    max-height:62vh;overflow-y:auto;
+    transition:max-height 0.2s ease;
   }
+  /* Drag handle for the mobile bottom sheet */
+  .sheet-handle{
+    display:block;
+    width:38px;height:4px;border-radius:2px;background:var(--ink-muted);
+    margin:-4px auto 10px;cursor:pointer;
+  }
+  /* Peek (collapsed) sheet: badge + headline + actions only */
+  .verdict.peek{max-height:none}
+  .verdict.peek #fields,
+  .verdict.peek #fireStatus,
+  .verdict.peek #confidence,
+  .verdict.peek .disclaimer{display:none !important}
+  .verdict.peek .verdict-row{margin-bottom:8px}
   .verdict-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px}
   .verdict-badge{
     flex:0 0 auto;width:52px;height:52px;border-radius:50%;
@@ -1231,6 +1254,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       box-shadow:4px 0 24px rgba(0,0,0,0.5);
       overflow-y:auto;
     }
+    .sheet-handle{display:none}
     .verdict-headline{font-size:26px}
     .zoom-ctl, .basemap-ctl{
       top:auto;bottom:auto;
@@ -1293,6 +1317,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <div class="overlay-toggle" id="overlayToggle">
     <div class="overlay-switch"></div>
     <div class="overlay-toggle-label">Ownership</div>
+    <button class="legend-toggle" id="legendToggle" aria-label="Toggle legend" title="Show legend">▸</button>
   </div>
   <div class="overlay-legend">
     <div class="legend-row"><div class="legend-swatch" style="background:#f3de81"></div>BLM — generally OK</div>
@@ -1313,6 +1338,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <div class="verdict" id="verdict">
+  <div class="sheet-handle" id="sheetHandle"></div>
   <div class="verdict-row">
     <div class="verdict-badge idle" id="vBadge">?</div>
     <div style="flex:1;min-width:0">
@@ -1675,6 +1701,11 @@ overlayToggle.onclick = () => {
     ownershipOverlay.addTo(map);
   }
 };
+// Legend caret toggles the legend independently of the ownership tint.
+document.getElementById('legendToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  overlayCtl.classList.toggle('legend-open');
+});
 
 // Force Leaflet to recalc size after layout settles (fixes blank-map issues)
 requestAnimationFrame(() => map.invalidateSize());
@@ -1682,6 +1713,45 @@ setTimeout(() => map.invalidateSize(), 100);
 setTimeout(() => map.invalidateSize(), 500);
 window.addEventListener('resize', () => map.invalidateSize());
 window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 200));
+
+/* ============================================================
+   Mobile UX — crosshair lands in the VISIBLE map band (not behind
+   the panels), and the verdict is a collapsible peek sheet so the
+   map stays usable and pan/pinch work.
+   ============================================================ */
+const isMobile = () => !window.matchMedia('(min-width: 900px)').matches;
+
+function positionCrosshair() {
+  const root = document.documentElement;
+  if (!isMobile()) { root.style.removeProperty('--xhair-top'); return; }
+  const topEl = document.querySelector('.top-overlay');
+  const verdictBox = document.getElementById('verdict');
+  const topB = topEl ? topEl.getBoundingClientRect().bottom : 0;
+  const verT = verdictBox ? verdictBox.getBoundingClientRect().top : window.innerHeight;
+  const mid = Math.max(topB + 30, (topB + verT) / 2);
+  root.style.setProperty('--xhair-top', Math.round(mid) + 'px');
+}
+
+const _verdictEl = document.getElementById('verdict');
+function setPeek(peek) {
+  if (!isMobile()) { _verdictEl.classList.remove('peek'); return; }
+  _verdictEl.classList.toggle('peek', peek);
+  map.invalidateSize();
+  positionCrosshair();
+}
+function togglePeek() { setPeek(!_verdictEl.classList.contains('peek')); }
+
+document.getElementById('sheetHandle').addEventListener('click', togglePeek);
+// Tapping the badge/headline row also toggles the sheet (but not its buttons).
+document.querySelector('.verdict-row').addEventListener('click', (e) => {
+  if (isMobile() && !e.target.closest('button')) togglePeek();
+});
+
+// Start collapsed on mobile so the map is front-and-center.
+if (isMobile()) _verdictEl.classList.add('peek');
+positionCrosshair();
+window.addEventListener('resize', positionCrosshair);
+window.addEventListener('orientationchange', () => setTimeout(positionCrosshair, 250));
 
 // Surface tile errors visibly so blank maps don't fail silently
 let tileErrorCount = 0;
